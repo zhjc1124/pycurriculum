@@ -12,12 +12,12 @@ def check_key(func):
 class Course(object):
     def __init__(self, *args, **kwargs):
         self._registry = {'name': None,
-                          'location': None,
                           'teacher': None,
-                          'classes': None,
-                          'weeks': None}
+                          'schedule': None,
+                          }
         flag = 0
-        for key in self._registry:
+        keys = ['name', 'teacher', 'schedule']
+        for key in keys:
             if key in kwargs:
                 self._registry[key] = kwargs[key]
             elif flag < len(args):
@@ -76,8 +76,8 @@ class Curriculum(object):
             raise KeyError('key %s is illegal' % (kwargs.keys()-self.setting.keys()))
 
     def add(self, course):
-        if type(course.classes) is str:
-            course.classes = [course.classes]
+        if type(course.schedule[0]) is str:
+            course.schedule = [course.schedule]
         self.courses.append(course)
 
     def to_ics(self, filename):
@@ -106,11 +106,11 @@ class Curriculum(object):
                           }
 
             for course in self.courses:
-                for class_ in course.classes:
-                    weekday, begin_class, end_class = map(int, class_.split('-'))
+                for class_ in course.schedule:
+                    weekday, begin_class, end_class = map(int, class_[1].split('-'))
                     sub = end_class - begin_class
 
-                    begin_week, end_week = map(int, course.weeks.split('-'))
+                    begin_week, end_week, *kind = map(int, class_[2].split('-'))
                     count = end_week - begin_week + 1
 
                     byday = ('MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU')
@@ -120,23 +120,30 @@ class Curriculum(object):
                         duration += setting['after_class'] - 10
 
                     dtstart = class_time[begin_class] + timedelta(days=(begin_week-1)*7+weekday-1)
+                    if kind:
+                        kind = kind[0]
+                        count = int(count/2)
+                        if kind % 2 != begin_week % 2:
+                            dtstart += timedelta(days=7)
+
                     dtend = dtstart + timedelta(seconds=duration*60)
                     f.write('BEGIN:VEVENT\n')
                     f.write(dtstart.strftime('DTSTART:%Y%m%dT%H%M%S\n'))
                     f.write(dtend.strftime('DTEND:%Y%m%dT%H%M%S\n'))
                     f.write('SUMMARY:%s\n' % course.name)
-                    f.write('LOCATION:%s  %s\n' % (course.location, course.teacher))
+                    f.write('LOCATION:%s  %s\n' % (class_[0], course.teacher))
                     f.write('DESCRIPTION:%s - %s节\n' % (begin_class, end_class))
-                    f.write('RRULE:FREQ=WEEKLY;COUNT=%s;BYDAY=%s\n' % (count, byday[weekday-1]))
+                    rrule = 'RRULE:FREQ=WEEKLY;COUNT=%s;BYDAY=%s\n' % (count, byday[weekday-1])
+                    if kind:
+                        rrule = 'RRULE:FREQ=WEEKLY;COUNT=%s;INTERVAL=2;BYDAY=%s\n' % (count, byday[weekday - 1])
+                    f.write(rrule)
                     f.write('END:VEVENT\n')
             f.write('END:VCALENDAR\n')
 
 
 if __name__ == "__main__":
-    t1 = Course('课程一', '三阶', '李', '1-3-4', '4-10')
-    t2 = Course('课程二', '四阶', '梁', ['2-1-4', '3-7-8', '7-9-11'], '1-20')
-    tc = Curriculum('2018-01-30')
-    tc.add(t1)
+    #            课程名   教室   教师  周一34节  4-10周单周
+    t2 = Course('课程二', '刘', ['梁', '2-1-4', '1-20-1'])
+    tc = Curriculum('2018-01-01')
     tc.add(t2)
-    tc.to_ics('test')
-    print(tc)
+    print(t2.schedule)
