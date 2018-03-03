@@ -11,7 +11,7 @@ pip install selenium, requests
 python UIMS.py
 username,password
 ```
-然后填入学号和身份证后六位(x小写)
+在目录下生成的ics文件既可导入到outlook中或者手机日历中
 
 # 如何自行添加课程
 ```
@@ -35,3 +35,5 @@ tc.add(t2)
 tc.to_ics('test')
 ```
 
+# 相关
+JLU_UIMS: https://github.com/zhjc1124/JLU_UIMS
