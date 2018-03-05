@@ -5,13 +5,16 @@
 然后生成ics文件导入日历
 
 # 如何使用
-自行配置好selenium环境
+自行配置好selenium环境，chrome和firefox均可。     
+默认为chrome，firefox需更改UIMS.py的11-17行。  
 ```
-pip install selenium, requests
+pip install requests
 python analyze.py
 username,password
 ```
-在目录下生成的ics文件既可导入到outlook中或者手机日历中
+在目录下生成的ics文件既可导入到outlook中或者手机日历中。            
+推荐使用谷歌日历或者bussiness日历：https://pan.baidu.com/s/1B6Y2eGv1Pzgwuqb03l4WlA
+
 
 # 如何自行添加课程
 ```
