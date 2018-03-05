@@ -7,10 +7,16 @@ import json
 
 
 # 按自行需要更改
-from selenium.webdriver.chrome.options import Options
-chrome_options = Options()
+chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--headless')
 driver = webdriver.Chrome(chrome_options=chrome_options)
+
+
+# firefox_options = webdriver.FirefoxOptions()
+# firefox_options.add_argument('-headless')
+# driver=webdriver.Firefox(firefox_options=firefox_options)
+
+
 
 
 class UIMS(object):
