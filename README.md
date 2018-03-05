@@ -8,7 +8,7 @@
 自行配置好selenium环境
 ```
 pip install selenium, requests
-python UIMS.py
+python analyze.py
 username,password
 ```
 在目录下生成的ics文件既可导入到outlook中或者手机日历中
