@@ -5,9 +5,8 @@
 然后生成ics文件导入日历
 
 # 如何使用
-自行配置好selenium环境
 ```
-pip install selenium, requests
+pip install requests
 python UIMS.py
 username,password
 ```
