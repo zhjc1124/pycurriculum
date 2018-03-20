@@ -1,51 +1,40 @@
-from hashlib import md5
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import requests
 import json
-import re
 
 
-def transfer(username, password):
-    j_password = md5(('UIMS' + username + password).encode()).hexdigest()
-    pwd_strenth = 0
-    if len(password) < 4 or username == password or password == '000000':
-        pass
-    else:
-        if any(map(lambda x: x.isdigit(), password)):
-            pwd_strenth += 1
-        if any(map(lambda x:x.isalpha(), password)):
-            pwd_strenth += 1
-        if not password.isalnum():
-            pwd_strenth += 1
-        if len(password) < 6 and pwd_strenth:
-            pwd_strenth -= 1
-    return j_password, pwd_strenth
+# 按自行需要更改
+from selenium.webdriver.chrome.options import Options
+chrome_options = Options()
+chrome_options.add_argument('--headless')
+driver = webdriver.Chrome(chrome_options=chrome_options)
 
 
 class UIMS(object):
     def __init__(self, user, pwd):
+        self.cookies = self.login(user, pwd)
         self.session = requests.session()
-        self.login(user, pwd)
+        requests.utils.add_dict_to_cookiejar(self.session.cookies, self.cookies)
 
     def login(self, username, password):
-        s = self.session
-        s.get('http://uims.jlu.edu.cn/ntms/')
-        j_password, pwd_strength = transfer(username, password)
-        cookies = {
-            'loginPage': 'userLogin.jsp',
-            'alu': username,
-            'pwdStrength': '2',
-        }
-        requests.utils.add_dict_to_cookiejar(s.cookies, cookies)
-
-        post_data = {
-            'j_username': username,
-            'j_password': j_password,
-            'mousePath': pwd_strength
-        }
-        r = s.post('http://uims.jlu.edu.cn/ntms/j_spring_security_check', data=post_data)
-        message = re.findall('<span class="error_message" id="error_message">(.*?)</span>', r.text)
-        if message:
-            raise ValueError(message[0])
+        driver.get('http://uims.jlu.edu.cn')
+        # 等待页面加载完毕
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "script")))
+        print("success login")
+        js = 'dojo.byId("txtUserName").focus();' \
+             'var form = dojo.byId("loginForm");' \
+             'form.j_username.value = "%s";' \
+             'form.pwdPlain.value = "%s";' \
+             'loginPage.clickSubmit();' % (username, password)
+        driver.execute_script(js)
+        cookies = {}
+        for c in driver.get_cookies():
+            if c['name'] != 'pwdStrength':
+                cookies[c['name']] = c['value']
+        return cookies
 
     def get_course(self):
         s = self.session
@@ -70,7 +59,7 @@ class UIMS(object):
 
 
 if __name__ == '__main__':
-    user, pwd = input().split(',')
-    # user, pwd = 'username', 'password'
+    # user, pwd = input().split(',')
+    user, pwd = 'user', 'pwd'
     print(UIMS(user, pwd).get_course())
 
