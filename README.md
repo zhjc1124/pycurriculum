@@ -10,7 +10,7 @@ pip install requests
 python UIMS.py
 username,password
 ```
-在目录下生成的ics文件既可导入到outlook中或者手机日历中
+在目录下生成的ics文件可导入到outlook中或者手机日历中
 
 # 如何自行添加课程
 ```

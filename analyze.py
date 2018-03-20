@@ -70,7 +70,7 @@ class UIMS(object):
 
 
 if __name__ == '__main__':
-    user, pwd = input().split(',')
+    user, pwd = input('请输入用户名和密码(,隔开)').split(',')
     # user, pwd = 'username', 'password'
     print(UIMS(user, pwd).get_course())
 
