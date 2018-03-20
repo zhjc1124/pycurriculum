@@ -1,76 +1,38 @@
-from hashlib import md5
-import requests
-import json
+from pycurriculum import Curriculum, Course
+from UIMS import UIMS
 import re
 
 
-def transfer(username, password):
-    j_password = md5(('UIMS' + username + password).encode()).hexdigest()
-    pwd_strenth = 0
-    if len(password) < 4 or username == password or password == '000000':
-        pass
-    else:
-        if any(map(lambda x: x.isdigit(), password)):
-            pwd_strenth += 1
-        if any(map(lambda x:x.isalpha(), password)):
-            pwd_strenth += 1
-        if not password.isalnum():
-            pwd_strenth += 1
-        if len(password) < 6 and pwd_strenth:
-            pwd_strenth -= 1
-    return j_password, pwd_strenth
-
-
-class UIMS(object):
-    def __init__(self, user, pwd):
-        self.session = requests.session()
-        self.login(user, pwd)
-
-    def login(self, username, password):
-        s = self.session
-        s.get('http://uims.jlu.edu.cn/ntms/')
-        j_password, pwd_strength = transfer(username, password)
-        cookies = {
-            'loginPage': 'userLogin.jsp',
-            'alu': username,
-            'pwdStrength': '2',
-        }
-        requests.utils.add_dict_to_cookiejar(s.cookies, cookies)
-
-        post_data = {
-            'j_username': username,
-            'j_password': j_password,
-            'mousePath': pwd_strength
-        }
-        r = s.post('http://uims.jlu.edu.cn/ntms/j_spring_security_check', data=post_data)
-        message = re.findall('<span class="error_message" id="error_message">(.*?)</span>', r.text)
-        if message:
-            raise ValueError(message[0])
-
-    def get_course(self):
-        s = self.session
-        r = s.post('http://uims.jlu.edu.cn/ntms/action/getCurrentUserInfo.do')
-        user_info = json.loads(r.text)
-        post_data = {
-            "tag": "search@teachingTerm",
-            "branch": "byId",
-            "params": {
-                "termId": user_info['defRes']['term_l']
-            }
-        }
-        headers = {'Content-Type': 'application/json'}
-        r = s.post('http://uims.jlu.edu.cn/ntms/service/res.do', json.dumps(post_data), headers=headers)
-        start_date = json.loads(r.text)['value'][0]['startDate'].split('T')[0]
-
-        post_data["params"]["studId"] = user_info['userId']
-        post_data["branch"] = "default"
-        post_data["tag"] = "teachClassStud@schedule"
-        r = s.post('http://uims.jlu.edu.cn/ntms/service/res.do', json.dumps(post_data), headers=headers)
-        return start_date, json.loads(r.text)['value']
+def generate_ics(user, pwd, filename):
+    start_date, courses = UIMS(user, pwd).get_course()
+    course_lists = []
+    for course in courses:
+        course_info = {}
+        c = course['teachClassMaster']
+        if c['lessonSchedules']:
+            course_info['name'] = c['lessonSegment']['fullName']
+            course_info['teacher'] = c['lessonTeachers'][0]['teacher']['name']
+            course_info['schedule'] = []
+            for s in c['lessonSchedules']:
+                schedule = [s['classroom']['fullName']]
+                time = s['timeBlock']
+                week = '一二三四五六日'
+                values = re.findall('周([%s])第(\d*)[,\d]*,(\d*)节\{第(\d*)-(\d*)周(\|(.)周)?\}' % week, time['name'])[0]
+                schedule.append('%s-%s-%s' % (week.index(values[0]) + 1, values[1], values[2]))
+                repeat = '%s-%s' % (values[3], values[4])
+                if values[-1] == '单':
+                    repeat += '-1'
+                elif values[-1] == '双':
+                    repeat += '-2'
+                schedule.append(repeat)
+                course_info['schedule'].append(schedule)
+            course_lists.append(course_info)
+    curriculum = Curriculum(start_date)
+    for c in course_lists:
+        curriculum.add(Course(**c))
+    curriculum.to_ics(filename)
 
 
 if __name__ == '__main__':
-    user, pwd = input('请输入用户名和密码(,隔开)').split(',')
-    # user, pwd = 'username', 'password'
-    print(UIMS(user, pwd).get_course())
-
+    username, password = input('请输入用户名和密码（用","分隔开）：').split(',')
+    generate_ics(username, password, 'mycourses')
